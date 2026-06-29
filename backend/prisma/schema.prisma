@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enums removed for SQLite compatibility
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+
+  studentProfile     StudentProfile?
+  facultyProfile     FacultyProfile?
+}
+
+model Department {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  code            String           @unique
+  studentProfiles StudentProfile[]
+  facultyProfiles FacultyProfile[]
+}
+
+model StudentProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  departmentId    Int
+  department      Department @relation(fields: [departmentId], references: [id])
+  
+  enrollmentNo    String   @unique
+  batchYear       Int
+  currentSemester Int      @default(1)
+  
+  phone           String?
+  address         String?
+  photoUrl        String?
+  
+  githubUrl       String?
+  linkedinUrl     String?
+  portfolioUrl    String?
+  
+  careerPath      String @default("UNDECIDED")
+  placementStatus String @default("NOT_APPLICABLE")
+
+  cgpa            Float?   @default(0.0)
+  arrears         Int      @default(0)
+
+  academicRecords AcademicRecord[]
+  skills          Skill[]
+  certifications  Certification[]
+  projects        Project[]
+  internships     Internship[]
+  resumes         Resume[]
+  applications    PlacementApplication[]
+  documents       Document[]
+  placementRecord PlacementRecord?
+}
+
+model FacultyProfile {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  user           User     @relation(fields: [userId], references: [id])
+  departmentId   Int
+  department     Department @relation(fields: [departmentId], references: [id])
+  employeeId     String   @unique
+  designation    String?
+}
+
+model AcademicRecord {
+  id               Int      @id @default(autoincrement())
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  semester         Int
+  sgpa             Float
+  totalMarks       Float?
+  attendancePercent Float?
+  arrearsInSem     Int      @default(0)
+}
+
+model Skill {
+  id               Int      @id @default(autoincrement())
+  name             String
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+}
+
+model Certification {
+  id               Int      @id @default(autoincrement())
+  name             String
+  issuer           String
+  date             DateTime?
+  url              String?
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+}
+
+model Project {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String
+  url              String?
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+}
+
+model Internship {
+  id               Int      @id @default(autoincrement())
+  companyName      String
+  role             String
+  duration         String
+  startDate        DateTime?
+  endDate          DateTime?
+  skillsGained     String?
+  certificateUrl   String?
+  status           String   @default("PENDING") // "PENDING", "VERIFIED", "REJECTED"
+  remarks          String?
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+}
+
+model Resume {
+  id               Int      @id @default(autoincrement())
+  version          Int      @default(1)
+  fileUrl          String
+  fileName         String
+  isDefault        Boolean  @default(false)
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  createdAt        DateTime @default(now())
+}
+
+model Company {
+  id             Int      @id @default(autoincrement())
+  name           String
+  industry       String?
+  website        String?
+  description    String?
+  drives         PlacementDrive[]
+}
+
+model PlacementDrive {
+  id                  Int      @id @default(autoincrement())
+  companyId           Int
+  company             Company  @relation(fields: [companyId], references: [id])
+  title               String
+  date                DateTime
+  package             String
+  eligibilityCgpa     Float
+  eligibilityArrears  Int      @default(0)
+  description         String?
+  applications        PlacementApplication[]
+}
+
+model PlacementApplication {
+  id               Int      @id @default(autoincrement())
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  driveId          Int
+  drive            PlacementDrive @relation(fields: [driveId], references: [id])
+  status           String @default("APPLIED")
+  appliedAt        DateTime @default(now())
+}
+
+model Document {
+  id               Int            @id @default(autoincrement())
+  studentProfileId Int
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  type             String         // "RESUME", "SKILL_CERTIFICATE", "INTERNSHIP_CERTIFICATE", "PROJECT_CERTIFICATE", "PLACEMENT_DOCUMENT", "GOVT_EXAM_CERTIFICATE", "HIGHER_STUDIES_DOCUMENT"
+  fileName         String
+  fileUrl          String
+  status           String         @default("PENDING") // "PENDING", "VERIFIED", "REJECTED"
+  verifiedBy       Int?
+  verificationDate DateTime?
+  remarks          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model PlacementRecord {
+  id               Int            @id @default(autoincrement())
+  studentProfileId Int            @unique
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id])
+  companyName      String
+  role             String
+  package          String
+  status           String         @default("PLACED") // "PLACED", "OFFER_ACCEPTED", "PENDING_VERIFICATION"
+  proofUrl         String?
+  isVerified       Boolean        @default(false)
+  verifiedBy       Int?
+  remarks          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  type      String   // "INTERNSHIP", "PLACEMENT", "GOVT_EXAM", "GENERAL"
+  postedBy  Int      // User ID of poster
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
